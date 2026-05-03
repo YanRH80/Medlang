@@ -182,9 +182,24 @@ def rename(old_path: Path, new_name: str) -> Path:
         if old_path.exists():
             os.replace(old_path, new_path)
         else:
-            # Nothing on disk yet; just hand back the new path.
             pass
     except OSError as exc:  # pragma: no cover - filesystem failure
         raise StorageError(f"failed to rename: {exc}") from exc
 
     return new_path
+
+
+def list_documents(vault: Path) -> list[Path]:
+    """Return all .json files in `vault`, sorted by name.
+
+    Returns an empty list if `vault` does not exist. Excludes the
+    `.document.json.tmp` atomic-save artefact.
+    """
+
+    if not vault.is_dir():
+        return []
+
+    return sorted(
+        p for p in vault.iterdir()
+        if p.is_file() and p.suffix == ".json" and not p.name.endswith(".tmp")
+    )

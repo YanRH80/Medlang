@@ -165,7 +165,7 @@ class CommandRegistry:
 
         Resolution order:
         1. Exact name match (used by the modal, where the full name is picked).
-        2. Unique prefix match (lets `:lig` execute `light-dark-mode`).
+        2. Unique prefix match (lets `:tog` execute `theme-toggle`).
         3. Otherwise, report ambiguity or unknown.
         """
 

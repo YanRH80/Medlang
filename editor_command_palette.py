@@ -45,7 +45,7 @@ class CommandPaletteScreen(ModalScreen[str | None]):
     CSS = """
     CommandPaletteScreen {
         align: center middle;
-        background: #0f172a 80%;
+        background: $panel 80%;
     }
 
     #dialog {
@@ -54,43 +54,44 @@ class CommandPaletteScreen(ModalScreen[str | None]):
         height: 70%;
         max-height: 25;
         padding: 1 2;
-        border: round #6366f1;
-        background: #0f172a;
-        color: #e2e8f0;
+        border: round $primary;
+        background: $surface;
+        color: $foreground;
     }
 
     #command-query {
         margin: 0 0 1 0;
-        border: round #334155;
-        background: #1e293b;
-        color: #f1f5f9;
+        border: round $primary;
+        background: $surface;
+        color: $foreground;
     }
 
     #command-query:focus {
-        border: round #6366f1;
+        border: round $primary;
     }
 
     #command-list {
         height: 1fr;
-        background: #0f172a;
+        background: $surface;
         border: none;
         padding: 0;
     }
 
     #command-list > .option-list--option-highlighted {
-        background: #312e81;
-        color: #f8fafc;
+        background: $accent;
+        color: $foreground;
         text-style: bold;
     }
 
     .palette-title {
         text-style: bold;
-        color: #fbbf24;
+        color: $accent;
         margin-bottom: 1;
     }
 
     .palette-hint {
-        color: #64748b;
+        color: $foreground;
+        text-style: dim;
         margin-top: 1;
     }
     """

@@ -171,6 +171,21 @@ def _doc_lines(editor: Any) -> list[str]:
     return [editor.document[row] for row in range(editor.document.line_count)]
 
 
+def _join_lines(app: Any, editor: Any) -> None:
+    """Join current line with the line below. Cursor moves to end of joined line."""
+    row, _ = editor.cursor_location
+    total = editor.document.line_count
+    if row >= total - 1:
+        return
+    cur_end = editor.get_cursor_line_end_location()
+    next_start = cur_end
+    next_end = (row + 1, 0)
+    editor.replace(" ", next_start, next_end)
+    new_pos = editor.get_cursor_line_end_location()
+    editor.move_cursor(new_pos)
+    app.set_status_message("joined")
+
+
 def _move_word(editor: Any, kind: str) -> None:
     """Apply a word-motion verb. `kind` is one of w b e W B E."""
 
@@ -333,6 +348,11 @@ def handle_vim_key(app: Any, editor: Any, event: Any) -> bool:
             app.set_status_message("g…")
             return True
 
+        if key == "space":
+            if hasattr(app, "open_which_key"):
+                app.open_which_key()
+            return True
+
         if key == "i":
             _enter_insert_mode(app)
             app.set_status_message("insert mode")
@@ -387,6 +407,10 @@ def handle_vim_key(app: Any, editor: Any, event: Any) -> bool:
             app.set_status_message("open line above")
             return True
 
+        if key == "J":
+            _join_lines(app, editor)
+            return True
+
         if key in {"h", "j", "k", "l", "0", "$"}:
             move_map = {
                 "h": editor.action_cursor_left,
@@ -417,6 +441,11 @@ def handle_vim_key(app: Any, editor: Any, event: Any) -> bool:
             editor.action_redo()
             app.set_status_message("redo")
             return True
+
+    # Let modified keys (ctrl/alt/super/shift combos) propagate to app-level
+    # bindings so ctrl+p, super+h/j/k/l etc. reach the app's BINDINGS.
+    if "+" in key:
+        return False
 
     # Swallow unhandled keys in non-insert modes to prevent accidental edits.
     event.stop()

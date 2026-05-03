@@ -43,7 +43,7 @@ def test_deep_merge_replaces_with_non_dict() -> None:
 def test_validate_config_clean_yields_no_warnings() -> None:
     cfg = {
         "app": {"title": "x"},
-        "editor": {"palette": "midnight"},
+        "editor": {"theme": "textual-dark"},
         "storage": {"document_path": "x.json"},
         "commands": {},
     }
@@ -82,11 +82,10 @@ def test_load_config_uses_defaults_when_missing(tmp_path: Path, monkeypatch) -> 
 
 def test_load_config_merges_user_yaml(tmp_path: Path, monkeypatch) -> None:
     p = tmp_path / "config.yaml"
-    p.write_text("editor:\n  palette: forest\n")
+    p.write_text("editor:\n  theme: tokyo-night\n")
     monkeypatch.setattr(app_module, "CONFIG_PATH", p)
     cfg, warnings = app_module._load_config()
-    assert cfg["editor"]["palette"] == "forest"
-    # Other defaults preserved.
+    assert cfg["editor"]["theme"] == "tokyo-night"
     assert cfg["editor"]["vim_start_mode"] == "normal"
     assert warnings == []
 

@@ -1,0 +1,87 @@
+# =============================================================================
+# Editor simple — configuración
+# =============================================================================
+#
+# Cambia el comportamiento del editor sin tocar el código. Edita este archivo,
+# guarda y vuelve a abrir la app para que los cambios tengan efecto.
+#
+# Convenciones:
+#   - Los valores entre comillas son texto libre.
+#   - true / false (sin comillas) son booleanos.
+#   - Cada clave indica los valores aceptados y su valor por defecto.
+
+
+# -----------------------------------------------------------------------------
+# Aplicación
+# -----------------------------------------------------------------------------
+# Identidad visible: barra superior y pestaña de la terminal.
+app:
+  # Texto principal en la barra superior.
+  # Por defecto: "Editor simple"
+  title: "Editor simple"
+
+  # Subtítulo opcional. Deja "" si no quieres mostrar nada.
+  # Por defecto: "Vim-like + JSON"
+  subtitle: "Vim-like + JSON"
+
+
+# -----------------------------------------------------------------------------
+# Editor
+# -----------------------------------------------------------------------------
+# Comportamiento del área de texto.
+editor:
+  # Texto que aparece cuando el documento está vacío.
+  # Por defecto: "Modo NORMAL. Pulsa i para escribir, : para comandos."
+  placeholder: "Modo NORMAL. Pulsa i para escribir, : para comandos."
+
+  # Si true, las líneas largas se ajustan al ancho de la ventana.
+  # Si false, hay scroll horizontal.
+  # Por defecto: false
+  soft_wrap: false
+
+  # Si true, muestra una columna con los números de línea a la izquierda.
+  # Por defecto: true
+  show_line_numbers: true
+
+  # Modo Vim al arrancar. Valores aceptados: "insert", "normal".
+  # Por defecto: "normal" (estándar Vim/Neovim/LazyVim).
+  vim_start_mode: "normal"
+
+  # Paleta de color por defecto.
+  # Valores aceptados: midnight, paper, forest, sunset, mono.
+  # Por defecto: "midnight"
+  palette: "midnight"
+
+
+# -----------------------------------------------------------------------------
+# Almacenamiento
+# -----------------------------------------------------------------------------
+# Cómo y dónde se guarda el documento.
+storage:
+  # Ruta relativa al directorio de la app. El archivo se crea si no existe.
+  # Por defecto: "document.json"
+  document_path: "document.json"
+
+  # Si true, guarda en cada cambio de texto.
+  # Si false, los cambios solo viven en memoria hasta cerrar la app.
+  # Por defecto: true
+  auto_save: true
+
+
+# -----------------------------------------------------------------------------
+# Comandos
+# -----------------------------------------------------------------------------
+# Comandos que aparecen en la paleta. Pulsa `:` (en modo normal o visual)
+# para abrir el selector y escribe para filtrar.
+#
+# Cada comando admite dos campos:
+#   enabled:     true (visible en la paleta) o false (oculto).
+#   description: texto que se muestra junto al nombre en la paleta.
+commands:
+  light-dark-mode:
+    enabled: true
+    description: "Switch between light and dark mode."
+
+  palette:
+    enabled: true
+    description: "Choose a color palette."

@@ -1,0 +1,19 @@
+{
+  "groups": {
+    "plan": {
+      "model": "opencode-go/deepseek-v4-pro",
+      "applies_to": ["plan"]
+    },
+    "build": {
+      "model": "opencode-go/minimax-m2.7",
+      "applies_to": ["build", "default"]
+    },
+    "review": {
+      "model": "opencode-go/glm-5.1",
+      "applies_to": ["review"]
+    }
+  },
+  "settings": {
+    "auto_switch_review": false
+  }
+}

@@ -15,6 +15,66 @@ vault with stable line IDs.
 4. **Goal-Driven Execution** — Define success criteria up front. Verify
    after coding. Run tests for the specific behavior requested.
 
+## Iterative pipeline (HARDCODE — never skip)
+
+Every session follows this sequence. No exceptions.
+
+### Phase 0 — Goal definition
+- Explicitly state: **what** are we building/changing, **why** it matters,
+  **success criteria** (how do we know we're done).
+- If the goal is ambiguous: **stop and ask**. Do not proceed to Phase 1.
+- Output: one paragraph confirming goal + criteria.
+
+### Phase 1 — Task breakdown
+- Convert the goal into **specific, actionable tasks** (numbered list).
+- Each task maps to ≤3 files. No task should touch >5 files.
+- If a task would touch unrelated modules: split it.
+- Output: numbered task list.
+
+### Phase 2 — SWOT + SOLID review (pre-flight)
+Before writing any code, for **each task** ask:
+- **S** (Strength): Does this follow existing patterns in the codebase?
+- **W** (Weakness): What can go wrong? Edge cases? Which tests would catch it?
+- **O** (Opportunity): Is there a simpler way? Can we reduce LOC?
+- **T** (Threat): Does this violate a freeze criterion or a gotcha?
+- **SOLID**: Does this break any of the five principles?
+- **Verdict**: Proceed / Merge with another task / Defer / Kill the task.
+
+Output: task-by-task verdict table. If any task is "Defer" or "Kill": stop
+and get user confirmation before continuing.
+
+### Phase 3 — Execute
+- Execute tasks **one at a time**. Never batch.
+- After each task: run its specific tests. Fix before continuing.
+- If you hit an unexpected problem: return to Phase 2 for that task.
+- Output: code changes + test results.
+
+### Phase 4 — Review
+- Did the changes match the plan? Any drift?
+- Are tests still green? (Run the full suite.)
+- Is the diff minimal and reviewable?
+- Output: "pass" or "needs fix".
+
+### Phase 5 — Metacognition (end of session)
+Before closing the session, record:
+- What worked well this session?
+- What would I do differently next time?
+- Any technical debt noticed but not touched (and why)?
+- Should any AGENTS.md be updated?
+
+Output: brief session log appended to this file.
+
+### Loop
+After Phase 5: **stop**. Next session starts at Phase 0 with fresh context.
+
+### Never skip
+- **Never** write code without Phases 0 + 1 done first.
+- **Never** skip Phase 2 even for "simple" tasks (the gotchas are where
+  simple tasks fail).
+- **Never** batch tasks in Phase 3. One at a time.
+- **Never** skip tests after a task.
+- **Never** skip Phase 5 metacognition.
+
 ## Directory layout
 
 ```
@@ -191,3 +251,37 @@ After any session:
 If frozen modules listed in their AGENTS.md still meet their freeze
 criteria: do not modify them. New functionality goes in a new module
 plus a `register(app, registry)` plug-in.
+
+## Pipeline model configuration
+
+Default models per mode (set in `.opencode.json` at project root):
+
+| Mode | Model | Rationale |
+|------|-------|-----------|
+| **Plan** | `deepseek-v4-pro` | 1M context, low hallucination, cross-module reasoning |
+| **Build** | `minimax-m2.7` | Fast, pattern-following, high request limit, token-efficient |
+| **Review** | `glm-5.1` | Best accuracy in Go, catches edge cases, marginal extra cost |
+
+Fallback to Zen for frontier tasks (refactors, complex bugs):
+`opencode-zen/claude-sonnet-4.5`
+
+```json
+// .opencode.json
+{
+  "groups": {
+    "plan": { "model": "opencode-go/deepseek-v4-pro" },
+    "build": { "model": "opencode-go/minimax-m2.7" },
+    "review": { "model": "opencode-go/glm-5.1" }
+  }
+}
+```
+
+Review (GLM 5.1) is **skipped** for trivial changes (config, CSS, docstrings).
+Review is **mandatory** for: `vim/keybindings.py`, `app.py`, new modals, new Vim verbs.
+
+## Session log
+
+| Date | Goal | Outcome |
+|------|------|---------|
+| 2026-05-04 | Setup pipeline: hardcode Phases 0-5 + pipeline model config | DONE — AGENTS.md phases HARDCODE'd, `.opencode.json` written |
+

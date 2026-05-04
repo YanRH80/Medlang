@@ -5,8 +5,8 @@ from __future__ import annotations
 import pytest
 from textual.widgets import Input, OptionList
 
-from editor_command_palette import CommandPaletteScreen
-from editor_commands import Command, CommandRegistry, CommandResult
+from modals.command_palette import CommandPaletteScreen
+from commands import Command, CommandRegistry, CommandResult
 
 
 def _build_registry() -> CommandRegistry:

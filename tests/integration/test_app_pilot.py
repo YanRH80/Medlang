@@ -6,38 +6,8 @@ from pathlib import Path
 
 import pytest
 
-import app as app_module
 from app import SimpleTextEditorApp
-from editor_keybindings import VimMode
-
-
-@pytest.fixture
-def tmp_document(tmp_path: Path, monkeypatch):
-    """Point the app at a throwaway JSON document for each test."""
-
-    doc_path = tmp_path / "doc.json"
-
-    # Override the default config so it points at the tmp document and
-    # leaves auto_save on. Patch the config loader to return our config so
-    # we never hit the real config.yaml.
-    cfg = {
-        "app": {"title": "T", "subtitle": "S"},
-        "editor": {
-            "placeholder": "",
-            "soft_wrap": False,
-            "show_line_numbers": True,
-            "vim_start_mode": "normal",
-            "palette": "midnight",
-        },
-        "storage": {
-            "document_path": str(doc_path),
-            "auto_save": True,
-        },
-        "commands": {},
-    }
-
-    monkeypatch.setattr(app_module, "_load_config", lambda: (cfg, []))
-    return doc_path
+from vim.keybindings import VimMode
 
 
 @pytest.mark.asyncio
@@ -83,7 +53,7 @@ async def test_escape_returns_to_normal(tmp_document) -> None:
 
 @pytest.mark.asyncio
 async def test_colon_in_normal_opens_command_palette(tmp_document) -> None:
-    from editor_command_palette import CommandPaletteScreen
+    from modals.command_palette import CommandPaletteScreen
 
     app = SimpleTextEditorApp()
     async with app.run_test() as pilot:

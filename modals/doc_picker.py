@@ -27,9 +27,10 @@ from pathlib import Path
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
+
+from modals._base import BaseModalScreen
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ def fuzzyfind_docs(query: str, candidates: list[Path], limit: int = 20) -> list[
     return [DocOption(p) for score, p in scored if score > 0][:limit]
 
 
-class DocPickerScreen(ModalScreen[str | None]):
+class DocPickerScreen(BaseModalScreen[str | None]):
     CSS = """
     DocPickerScreen {
         align: center middle;
@@ -93,8 +94,6 @@ class DocPickerScreen(ModalScreen[str | None]):
         margin-bottom: 1;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
 
     def __init__(self, docs: list[Path]) -> None:
         super().__init__()

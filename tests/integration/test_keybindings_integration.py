@@ -6,31 +6,8 @@ from pathlib import Path
 
 import pytest
 
-import app as app_module
 from app import SimpleTextEditorApp
-from editor_keybindings import VimMode
-
-
-@pytest.fixture
-def tmp_document(tmp_path: Path, monkeypatch):
-    doc_path = tmp_path / "doc.json"
-    cfg = {
-        "app": {"title": "T", "subtitle": "S"},
-        "editor": {
-            "placeholder": "",
-            "soft_wrap": False,
-            "show_line_numbers": True,
-            "vim_start_mode": "normal",
-            "palette": "midnight",
-        },
-        "storage": {
-            "document_path": str(doc_path),
-            "auto_save": True,
-        },
-        "commands": {},
-    }
-    monkeypatch.setattr(app_module, "_load_config", lambda: (cfg, []))
-    return doc_path
+from vim.keybindings import VimMode
 
 
 @pytest.mark.asyncio
@@ -196,11 +173,11 @@ async def test_space_leader_new_doc(tmp_document) -> None:
         await pilot.pause()
         await pilot.press("space")
         await pilot.pause()
-        from editor_which_key import WhichKeyScreen
+        from modals.which_key import WhichKeyScreen
         assert isinstance(app.screen, WhichKeyScreen)
         await pilot.press("n")
         await pilot.pause()
-        from editor_new_doc import NewDocScreen
+        from modals.new_doc import NewDocScreen
         assert isinstance(app.screen, NewDocScreen)
 
 
@@ -212,9 +189,9 @@ async def test_space_leader_open_doc(tmp_document) -> None:
         await pilot.pause()
         await pilot.press("space")
         await pilot.pause()
-        from editor_which_key import WhichKeyScreen
+        from modals.which_key import WhichKeyScreen
         assert isinstance(app.screen, WhichKeyScreen)
         await pilot.press("o")
         await pilot.pause()
-        from editor_doc_picker import DocPickerScreen
+        from modals.doc_picker import DocPickerScreen
         assert isinstance(app.screen, DocPickerScreen)

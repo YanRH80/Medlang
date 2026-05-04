@@ -11,7 +11,7 @@ Boundaries
 ----------
 - Does NOT implement custom themes. Textual ships 21 built-in themes.
 - Does NOT mutate CSS directly. Theme switches go through `app.theme`.
-- Does NOT own the theme picker UI. That lives in `editor_theme_picker`.
+- Does NOT own the theme picker UI. That lives in `modals.theme_picker`.
 
 Freeze criteria
 --------------

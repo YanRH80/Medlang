@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from editor_commands import (
+from commands import (
     Command,
     CommandRegistry,
     CommandResult,

@@ -22,8 +22,9 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Static
+
+from modals._base import BaseModalScreen
 
 
 COMMANDS: list[tuple[str, str]] = [
@@ -41,7 +42,7 @@ COMMANDS: list[tuple[str, str]] = [
 ]
 
 
-class WhichKeyScreen(ModalScreen[str | None]):
+class WhichKeyScreen(BaseModalScreen[str | None]):
     """Leader key hint popup. Returns the dispatched key or None on cancel."""
 
     CSS = """
@@ -85,8 +86,6 @@ class WhichKeyScreen(ModalScreen[str | None]):
         margin-top: 1;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Cancel")]
 
     def __init__(self, app: Any) -> None:
         super().__init__()

@@ -27,7 +27,6 @@ from dataclasses import dataclass
 from typing import Literal
 
 from textual.containers import Container
-from textual.css.query import NoMatches
 from textual.widget import Widget
 
 

@@ -25,13 +25,13 @@ from __future__ import annotations
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Input, Static
 
-from editor_commands import CommandRegistry
+from commands import CommandRegistry
+from modals._base import BaseModalScreen
 
 
-class HotkeySetScreen(ModalScreen[tuple[str, str] | None]):
+class HotkeySetScreen(BaseModalScreen[tuple[str, str] | None]):
     CSS = """
     HotkeySetScreen {
         align: center middle;
@@ -67,8 +67,6 @@ class HotkeySetScreen(ModalScreen[tuple[str, str] | None]):
         color: $error;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
 
     def __init__(self, registry: CommandRegistry | None = None) -> None:
         super().__init__()

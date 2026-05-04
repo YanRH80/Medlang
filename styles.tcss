@@ -1,26 +1,10 @@
-"""Visual layer: CSS for the editor.
+/* Medlang — global stylesheet.
+ *
+ * All colors go through Textual theme variables. Every built-in theme
+ * (textual-dark, tokyo-night, gruvbox-dark, etc.) renders correctly.
+ * No hard-coded hex.
+ */
 
-Scope
------
-Holds the global CSS string applied to the app. All color decisions go
-through Textual's theme variables so theme switching Just Works.
-
-Boundaries
-----------
-- Does NOT own UI structure. Widgets are composed in `app.py`.
-- Does NOT pick themes. That lives in `editor_theme_picker`.
-
-Freeze criteria
----------------
-- Every built-in Textual theme renders with the editor, header,
-  and status bar visible and readable.
-- CSS uses only theme variables (`$background`, `$surface`, `$primary`,
-  `$foreground`, `$accent`, `$panel`) — no hard-coded hex.
-"""
-
-from __future__ import annotations
-
-EDITOR_CSS = """
 Screen {
     background: $background;
     color: $foreground;
@@ -62,7 +46,7 @@ StatusBar {
     color: $foreground;
 }
 
-/* Active panel borders — set by app on focus/mode change */
+/* Active panel borders — set by app on focus/mode change. */
 #editor.active-normal,
 #editor.active-insert,
 #editor.active-visual,
@@ -94,4 +78,3 @@ StatusBar {
 #pane-files.active-visual_line {
     border-right: solid $accent;
 }
-"""

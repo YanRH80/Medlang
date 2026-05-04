@@ -9,7 +9,7 @@ name (or None on cancel).
 Boundaries
 ----------
 - Does NOT write to disk. The caller (`SimpleTextEditorApp._cmd_doc_new`)
-  handles the actual file creation via `editor_storage.save`.
+  handles the actual file creation via `storage.save`.
 - Does NOT know about the vault path. That is passed in via config.
 
 Freeze criteria
@@ -24,11 +24,12 @@ from __future__ import annotations
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Input, Static
 
+from modals._base import BaseModalScreen
 
-class NewDocScreen(ModalScreen[str | None]):
+
+class NewDocScreen(BaseModalScreen[str | None]):
     CSS = """
     NewDocScreen {
         align: center middle;
@@ -64,8 +65,6 @@ class NewDocScreen(ModalScreen[str | None]):
         color: $error;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):

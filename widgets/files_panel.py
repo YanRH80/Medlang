@@ -27,17 +27,18 @@ from pathlib import Path
 from typing import Iterable
 
 from textual.events import Key
-from textual.message import Message
 from textual.widgets import DirectoryTree
+
+from messages import DocumentSelected
 
 
 class FileTreePanel(DirectoryTree, can_focus=True):
     BORDER_TITLE = "Files"
 
-    class DocumentSelected(Message):
-        def __init__(self, path: Path) -> None:
-            super().__init__()
-            self.path = path
+    # Re-export so existing `FileTreePanel.DocumentSelected` references keep
+    # working through the migration. The canonical message lives in
+    # `messages.py`.
+    DocumentSelected = DocumentSelected
 
     def __init__(self, vault_path: Path, *, name: str | None = None, id: str | None = None, classes: str | None = None) -> None:
         super().__init__(str(vault_path), name=name, id=id, classes=classes)

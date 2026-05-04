@@ -9,7 +9,7 @@ reads its BINDINGS from this module at startup rather than hardcoding them.
 Boundaries
 ----------
 - Does NOT import from `app.py` (avoids circular dependency).
-- Does NOT know about Vim key handling (that lives in `editor_keybindings`).
+- Does NOT know about Vim key handling (that lives in `vim.keybindings`).
 - All disk I/O goes through `yaml` (no new storage mechanism).
 
 Freeze criteria

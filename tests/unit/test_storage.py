@@ -1,4 +1,4 @@
-"""Tests for editor_storage: load, save, rename, stable line IDs."""
+"""Tests for storage: load, save, rename, stable line IDs."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from editor_storage import (
+from storage import (
     LoadedDocument,
     StorageError,
     assign_line_ids,

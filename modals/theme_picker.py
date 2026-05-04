@@ -29,9 +29,10 @@ from difflib import SequenceMatcher
 from textual import on
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
+
+from modals._base import BaseModalScreen
 
 
 @dataclass(frozen=True)
@@ -59,7 +60,7 @@ def fuzzyfind_themes(query: str, candidates: list[str], limit: int = 12) -> list
     return [ThemeOption(name) for score, name in scored if score > 0][:limit]
 
 
-class ThemePickerScreen(ModalScreen[str | None]):
+class ThemePickerScreen(BaseModalScreen[str | None]):
     CSS = """
     ThemePickerScreen {
         align: center middle;
@@ -95,8 +96,6 @@ class ThemePickerScreen(ModalScreen[str | None]):
         margin-bottom: 1;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Dismiss")]
 
     def __init__(self, themes: list[str]) -> None:
         super().__init__()

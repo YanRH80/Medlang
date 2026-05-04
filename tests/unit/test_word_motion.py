@@ -1,10 +1,10 @@
-"""Tests for word-motion helpers in editor_keybindings."""
+"""Tests for word-motion helpers in vim.keybindings."""
 
 from __future__ import annotations
 
 import pytest
 
-from editor_keybindings import next_word_end, next_word_start, prev_word_start
+from vim.keybindings import next_word_end, next_word_start, prev_word_start
 
 
 # ---------------------------------------------------------------------------

@@ -8,9 +8,9 @@ or `None` if the user cancels.
 Boundaries
 ----------
 - Does NOT touch the filesystem. The caller passes the result to
-  `editor_storage.rename`.
+  `storage.rename`.
 - Does NOT validate the name beyond accepting any non-empty string. Disk
-  validation lives in `editor_storage` so the rules are in one place.
+  validation lives in `storage` so the rules are in one place.
 
 Freeze criteria
 ---------------
@@ -22,50 +22,50 @@ from __future__ import annotations
 
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.widgets import Input, Static
 
+from modals._base import BaseModalScreen
 
-class RenamePromptScreen(ModalScreen[str | None]):
+
+class RenamePromptScreen(BaseModalScreen[str | None]):
     """Modal asking for a new filename."""
 
     CSS = """
     RenamePromptScreen {
         align: center middle;
-        background: #0f172a 80%;
+        background: $panel 80%;
     }
 
     #rename-dialog {
         width: 60;
         height: auto;
         padding: 1 2;
-        border: round #6366f1;
-        background: #0f172a;
-        color: #e2e8f0;
+        border: round $primary;
+        background: $surface;
+        color: $foreground;
     }
 
     #rename-input {
         margin: 1 0;
-        border: round #334155;
-        background: #1e293b;
-        color: #f1f5f9;
+        border: round $panel;
+        background: $surface;
+        color: $foreground;
     }
 
     #rename-input:focus {
-        border: round #6366f1;
+        border: round $primary;
     }
 
     .rename-title {
         text-style: bold;
-        color: #fbbf24;
+        color: $accent;
     }
 
     .rename-hint {
-        color: #64748b;
+        color: $foreground;
+        text-style: dim;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Cancel")]
 
     def __init__(self, current_name: str) -> None:
         super().__init__()

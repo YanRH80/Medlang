@@ -1,10 +1,10 @@
-"""Pin-down tests for editor_register.Register."""
+"""Pin-down tests for register.Register."""
 
 from __future__ import annotations
 
 import pytest
 
-from editor_register import Register, RegisterContent
+from register import Register, RegisterContent
 
 
 # ---------------------------------------------------------------------------

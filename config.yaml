@@ -1,5 +1,5 @@
 # =============================================================================
-# Editor simple — configuración
+# Medlang — configuración
 # =============================================================================
 #
 # Cambia el comportamiento del editor sin tocar el código. Edita este archivo,
@@ -21,8 +21,8 @@
 # Aplicación
 # -----------------------------------------------------------------------------
 app:
-  title: "Editor simple"
-  subtitle: "Vim-like + JSON"
+  title: "Medlang"
+  subtitle: "Vim-like JSON editor"
 
 
 # -----------------------------------------------------------------------------
@@ -114,18 +114,6 @@ commands:
     description: "Focus the editor."
     hotkeys:
       - "space+l"
-
-  pane-focus-up:
-    enabled: true
-    description: "Focus the panel above."
-    hotkeys:
-      - "space+k"
-
-  pane-focus-down:
-    enabled: true
-    description: "Focus the panel below."
-    hotkeys:
-      - "space+j"
 
   doc-new:
     enabled: true

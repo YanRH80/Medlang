@@ -31,15 +31,15 @@ from __future__ import annotations
 from textual import events
 from textual.app import ComposeResult
 from textual.containers import Vertical
-from textual.screen import ModalScreen
 from textual.suggester import SuggestFromList
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
-from editor_commands import CommandRegistry
+from commands import CommandRegistry
+from modals._base import BaseModalScreen
 
 
-class CommandPaletteScreen(ModalScreen[str | None]):
+class CommandPaletteScreen(BaseModalScreen[str | None]):
     """Modal command picker. Returns the chosen command name or None."""
 
     CSS = """
@@ -95,8 +95,6 @@ class CommandPaletteScreen(ModalScreen[str | None]):
         margin-top: 1;
     }
     """
-
-    BINDINGS = [("escape", "dismiss", "Cancel")]
 
     def __init__(self, registry: CommandRegistry) -> None:
         super().__init__()

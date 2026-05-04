@@ -8,15 +8,15 @@ text change, refresh status on selection change).
 
 Boundaries
 ----------
-- Does NOT implement Vim key dispatch (see `editor_keybindings`).
+- Does NOT implement Vim key dispatch (see `vim.keybindings`).
 - Does NOT execute commands directly. Each command is a closure over app
   state, registered against the `CommandRegistry` at startup.
 - Does NOT touch the JSON file directly. All disk I/O goes through
-  `editor_storage`.
+  `storage`.
 - Does NOT format the status bar inline. The `StatusBar` widget owns
   rendering.
 - Does NOT manage panels directly. Panel show/hide/toggle is owned by
-  `LayoutManager` in `editor_layout`.
+  `LayoutManager` in `layout`.
 
 Freeze criteria
 --------------
@@ -31,198 +31,33 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import yaml
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
-from textual.widgets import Footer, Header, TextArea
-from textual.widgets.text_area import Selection
+from textual.widgets import Header, TextArea
 
-from editor_command_palette import CommandPaletteScreen
-from editor_commands import (
-    Command,
-    CommandRegistry,
-    CommandResult,
-    description_from_config,
-    is_enabled_in_config,
-)
-from editor_keybindings import VimMode, handle_vim_key
-from editor_layout import LayoutManager
-from editor_panel_files import FileTreePanel
-from editor_register import Register
-from editor_status import StatusBar, StatusSnapshot
-from editor_storage import LoadedDocument, StorageError, load, save, list_documents, rename
-from editor_styles import EDITOR_CSS
-from editor_theme_picker import ThemePickerScreen
-from editor_themes import list_themes, toggle_light_dark, current_theme_name
-from editor_config import load_hotkeys, save_hotkeys, Hotkey
+import config as _config_module
+from commands import CommandRegistry
+from layout import LayoutManager
+from modals.command_palette import CommandPaletteScreen
+from modals.theme_picker import ThemePickerScreen
+from register import Register
+from status_bar import StatusBar, StatusSnapshot
+from storage import LoadedDocument, StorageError, load, save
+from themes import list_themes
+from vim.keybindings import VimMode, handle_vim_key
+from widgets.files_panel import FileTreePanel
 
 
-BASE_DIR = Path(__file__).resolve().parent
-CONFIG_PATH = BASE_DIR / "config.yaml"
-
-DEFAULT_CONFIG: dict[str, Any] = {
-    "app": {
-        "title": "Editor simple",
-        "subtitle": "Vim-like + JSON",
-    },
-    "editor": {
-        "placeholder": "Modo NORMAL. Pulsa i para escribir, : para comandos.",
-        "soft_wrap": False,
-        "show_line_numbers": True,
-        "vim_start_mode": "normal",
-        "theme": "textual-dark",
-    },
-    "storage": {
-        "vault_path": "files",
-        "document_path": "files/document.json",
-        "auto_save": True,
-    },
-    "panels": {
-        "files": {
-            "visible_on_start": True,
-        },
-    },
-    "commands": {
-        "theme-toggle": {
-            "enabled": True,
-            "description": "Toggle between dark and light theme.",
-            "hotkeys": [],
-        },
-        "theme-pick": {
-            "enabled": True,
-            "description": "Open the theme picker.",
-            "hotkeys": [],
-        },
-        "doc-rename": {
-            "enabled": True,
-            "description": "Rename the current JSON document.",
-            "hotkeys": [],
-        },
-        "doc-save": {
-            "enabled": True,
-            "description": "Force-save the document now.",
-            "hotkeys": [],
-        },
-        "pane-files-toggle": {
-            "enabled": True,
-            "description": "Toggle the file panel visibility.",
-            "hotkeys": [],
-        },
-        "pane-files-show": {
-            "enabled": True,
-            "description": "Show the file panel.",
-            "hotkeys": [],
-        },
-        "pane-files-hide": {
-            "enabled": True,
-            "description": "Hide the file panel.",
-            "hotkeys": [],
-        },
-        "pane-focus-files": {
-            "enabled": True,
-            "description": "Focus the file panel.",
-            "hotkeys": [],
-        },
-        "pane-focus-editor": {
-            "enabled": True,
-            "description": "Focus the editor.",
-            "hotkeys": [],
-        },
-        "pane-focus-up": {
-            "enabled": True,
-            "description": "Focus the panel above.",
-            "hotkeys": [],
-        },
-        "pane-focus-down": {
-            "enabled": True,
-            "description": "Focus the panel below.",
-            "hotkeys": [],
-        },
-        "doc-new": {
-            "enabled": True,
-            "description": "Create a new JSON document.",
-            "hotkeys": [],
-        },
-        "doc-open": {
-            "enabled": True,
-            "description": "Open a document from the vault.",
-            "hotkeys": [],
-        },
-    },
-}
-
-
-_KNOWN_TOP_LEVEL_KEYS = set(DEFAULT_CONFIG.keys())
-_KNOWN_EDITOR_KEYS = set(DEFAULT_CONFIG["editor"].keys())
-_KNOWN_STORAGE_KEYS = set(DEFAULT_CONFIG["storage"].keys())
-_KNOWN_PANEL_KEYS = set(DEFAULT_CONFIG["panels"].keys())
-
-
-# ---------------------------------------------------------------------------
-# Configuration loading and validation.
-# ---------------------------------------------------------------------------
-
-
-def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge `override` on top of `base` without mutating either."""
-
-    merged = dict(base)
-    for key, value in override.items():
-        if isinstance(value, dict) and isinstance(merged.get(key), dict):
-            merged[key] = _deep_merge(merged[key], value)
-        else:
-            merged[key] = value
-    return merged
+BASE_DIR = _config_module.BASE_DIR
 
 
 def _load_config() -> tuple[dict[str, Any], list[str]]:
-    """Load config.yaml. Returns (config_dict, warnings)."""
+    """Thin wrapper around `config.load_config` so tests can monkeypatch
+    `app._load_config` (legacy patch target)."""
 
-    if not CONFIG_PATH.exists():
-        return DEFAULT_CONFIG, []
-
-    try:
-        loaded = yaml.safe_load(CONFIG_PATH.read_text())
-    except yaml.YAMLError as exc:
-        return DEFAULT_CONFIG, [f"config.yaml malformed: {exc}"]
-
-    if not isinstance(loaded, dict):
-        return DEFAULT_CONFIG, ["config.yaml must be a mapping; using defaults"]
-
-    warnings = _validate_config(loaded)
-    return _deep_merge(DEFAULT_CONFIG, loaded), warnings
-
-
-def _validate_config(cfg: dict[str, Any]) -> list[str]:
-    """Return human-readable warnings for unexpected keys or types."""
-
-    warnings: list[str] = []
-
-    for key in cfg:
-        if key not in _KNOWN_TOP_LEVEL_KEYS:
-            warnings.append(f"unknown config section: {key!r}")
-
-    editor = cfg.get("editor", {})
-    if isinstance(editor, dict):
-        for key in editor:
-            if key not in _KNOWN_EDITOR_KEYS:
-                warnings.append(f"unknown editor.{key}")
-
-    storage = cfg.get("storage", {})
-    if isinstance(storage, dict):
-        for key in storage:
-            if key not in _KNOWN_STORAGE_KEYS:
-                warnings.append(f"unknown storage.{key}")
-
-    panels = cfg.get("panels", {})
-    if isinstance(panels, dict):
-        for key in panels:
-            if key not in _KNOWN_PANEL_KEYS:
-                warnings.append(f"unknown panels.{key}")
-
-    return warnings
+    return _config_module.load_config()
 
 
 # ---------------------------------------------------------------------------
@@ -258,7 +93,7 @@ class SimpleTextEditorApp(App):
 
     TITLE = ""
     SUB_TITLE = ""
-    CSS = EDITOR_CSS
+    CSS_PATH = "styles.tcss"
 
     ENABLE_COMMAND_PALETTE = False
 
@@ -362,7 +197,7 @@ class SimpleTextEditorApp(App):
         self._layout_manager = LayoutManager(workspace)
 
         file_tree = FileTreePanel(self.vault_path)
-        from editor_layout import Panel
+        from layout import Panel
         self._layout_manager.register(Panel(
             id="pane-files",
             widget=file_tree,
@@ -433,35 +268,21 @@ class SimpleTextEditorApp(App):
                 pass
 
     # ----- mode transitions -------------------------------------------
+    # All mode bookkeeping lives in `vim.modes`. These thin wrappers exist
+    # so callers (vim.keybindings, command handlers) can keep using
+    # `app.enter_*` without knowing about the internals.
 
     def enter_normal_mode(self) -> None:
-        editor = self._editor()
-        editor.selection = Selection.cursor(editor.cursor_location)
-        self.visual_anchor = None
-        self.vim_prefix = ""
-        self.vim_mode = VimMode.NORMAL
-        self.refresh_status()
-        self._update_panel_borders()
+        from vim.modes import enter_normal
+        enter_normal(self)
 
     def enter_insert_mode(self) -> None:
-        self.visual_anchor = None
-        self.vim_prefix = ""
-        self.vim_mode = VimMode.INSERT
-        self.refresh_status()
-        self._update_panel_borders()
+        from vim.modes import enter_insert
+        enter_insert(self)
 
     def enter_visual_mode(self, linewise: bool = False) -> None:
-        editor = self._editor()
-        self.visual_anchor = editor.cursor_location
-        self.vim_prefix = ""
-        self.vim_mode = VimMode.VISUAL_LINE if linewise else VimMode.VISUAL
-        if linewise:
-            row, _ = editor.cursor_location
-            editor.selection = Selection((row, 0), (row, len(editor.document[row])))
-        else:
-            editor.selection = Selection.cursor(editor.cursor_location)
-        self.refresh_status()
-        self._update_panel_borders()
+        from vim.modes import enter_visual
+        enter_visual(self, linewise=linewise)
 
     # ----- command palette -------------------------------------------
 
@@ -495,188 +316,25 @@ class SimpleTextEditorApp(App):
         self.refresh_status()
         self.set_status_message(f"theme: {theme_name}")
 
-    def _cmd_doc_delete(self, app: Any) -> CommandResult:
-        from editor_doc_picker import DocPickerScreen
-
-        docs = [p for p in list_documents(self.vault_path) if p != self.document_path]
-        if not docs:
-            return CommandResult(False, "cannot delete: no other documents")
-
-        def _on_dismiss(path_str: str | None) -> None:
-            if not path_str:
-                self.set_status_message("delete cancelled")
-                return
-            if self.document_path.exists():
-                self.document_path.unlink()
-            self.open_document(Path(path_str))
-            self._refresh_file_tree()
-            self._focused_panel = "editor"
-            self._update_panel_borders()
-
-        self.push_screen(DocPickerScreen(docs), _on_dismiss)
-        return CommandResult(True, "delete: select replacement doc")
-
     # ----- command registration --------------------------------------
 
     def _register_commands(self) -> None:
-        commands_cfg = self.config_data.get("commands", {})
+        """Plug in commands from each feature module.
 
-        def make(name: str, default_description: str, handler) -> Command:
-            return Command(
-                name=name,
-                description=description_from_config(commands_cfg, name, default_description),
-                handler=handler,
-                enabled=is_enabled_in_config(commands_cfg, name),
-            )
+        Each `features/*.py` exports `register(app, registry)`. To add a
+        new command domain, drop a module under `features/` and append it
+        to the list below — nothing else in `app.py` needs to change.
+        """
 
-        self.command_registry.register(make(
-            "theme-toggle",
-            "Toggle between dark and light theme.",
-            lambda app: CommandResult(True, toggle_light_dark(app)),
-        ))
-        self.command_registry.register(make(
-            "theme-pick",
-            "Open the theme picker.",
-            self._cmd_theme_pick,
-        ))
-        self.command_registry.register(make(
-            "doc-rename",
-            "Rename the current JSON document.",
-            self._cmd_rename,
-        ))
-        self.command_registry.register(make(
-            "doc-save",
-            "Force-save the document now.",
-            self._cmd_save,
-        ))
-        self.command_registry.register(make(
-            "pane-files-toggle",
-            "Toggle the file panel.",
-            self._cmd_pane_files_toggle,
-        ))
-        self.command_registry.register(make(
-            "pane-focus-files",
-            "Focus the file panel.",
-            self._cmd_pane_focus_files,
-        ))
-        self.command_registry.register(make(
-            "pane-focus-editor",
-            "Focus the editor.",
-            self._cmd_pane_focus_editor,
-        ))
-        self.command_registry.register(make(
-            "hotkeys",
-            "Show all current hotkey bindings.",
-            self._cmd_hotkeys,
-        ))
-        self.command_registry.register(make(
-            "hotkey-set",
-            "Set a hotkey: hotkey-set <action> <key-combo>.",
-            self._cmd_hotkey_set,
-        ))
-        self.command_registry.register(make(
-            "doc-new",
-            "Create a new JSON document.",
-            self._cmd_doc_new,
-        ))
-        self.command_registry.register(make(
-            "doc-open",
-            "Open a document from the vault.",
-            self._cmd_doc_open,
-        ))
-        self.command_registry.register(make(
-            "command-palette",
-            "Open the command palette.",
-            lambda app: (self.open_command_palette(), CommandResult(True, "palette"))[1],
-        ))
-        self.command_registry.register(make(
-            "doc-delete",
-            "Delete the current document.",
-            self._cmd_doc_delete,
-        ))
+        from features import document, hotkey, leader, pane, theme
 
-    # ----- command handlers -----------------------------------------
+        for module in (theme, document, pane, hotkey, leader):
+            module.register(self, self.command_registry)
 
-    def _cmd_theme_pick(self, app: Any) -> CommandResult:
-        self.open_theme_picker()
-        return CommandResult(True, "theme picker opened")
-
-    def _cmd_save(self, app: Any) -> CommandResult:
-        return CommandResult(True, self.save_document(force=True))
-
-    def _cmd_pane_files_toggle(self, app: Any) -> CommandResult:
-        if self._layout_manager is None:
-            return CommandResult(False, "layout not ready")
-        lm = self._layout_manager
-        visible = lm.toggle("pane-files")
-        return CommandResult(True, f"files panel {'shown' if visible else 'hidden'}")
-
-    def _cmd_pane_focus_files(self, app: Any) -> CommandResult:
-        try:
-            tree = self.query_one("#pane-files", FileTreePanel)
-            tree.focus()
-            self._focused_panel = "pane-files"
-            self._update_panel_borders()
-            return CommandResult(True, "focused files panel")
-        except Exception:
-            return CommandResult(False, "files panel not available")
-
-    def _cmd_pane_focus_editor(self, app: Any) -> CommandResult:
-        self._editor().focus()
-        self._focused_panel = "editor"
-        self._update_panel_borders()
-        return CommandResult(True, "focused editor")
-
-    def _cmd_pane_focus_up(self, app: Any) -> CommandResult:
-        self._editor().focus()
-        self._focused_panel = "editor"
-        self._update_panel_borders()
-        return CommandResult(True, "focused editor")
-
-    def _cmd_pane_focus_down(self, app: Any) -> CommandResult:
-        self._editor().focus()
-        self._focused_panel = "editor"
-        self._update_panel_borders()
-        return CommandResult(True, "focused editor")
-
-    def _cmd_hotkeys(self, app: Any) -> CommandResult:
-        rows = ["Hotkeys:", "---------"]
-        for b in self.BINDINGS:
-            display = getattr(b, "display", "") or ""
-            if display:
-                rows.append(f"  {b.key} → {display}")
-            else:
-                rows.append(f"  {b.key}")
-        for hk in load_hotkeys():
-            for key in hk.keys:
-                rows.append(f"  {key} → {hk.action}  (config)")
-        return CommandResult(True, "\n".join(rows[:15]))
-
-    def _cmd_hotkey_set(self, app: Any) -> CommandResult:
-        from editor_hotkey_set import HotkeySetScreen
-
-        def _on_dismiss(result: tuple[str, str] | None) -> None:
-            if not result:
-                self.set_status_message("hotkey set cancelled")
-                return
-            action_name, key_combo = result
-            try:
-                hotkeys = load_hotkeys()
-                new_hk = Hotkey(action=action_name, keys=(key_combo,))
-                existing = [h for h in hotkeys if h.action == action_name]
-                if existing:
-                    hotkeys = [h for h in hotkeys if h.action != action_name]
-                hotkeys.append(new_hk)
-                save_hotkeys(hotkeys)
-                self.set_status_message(f"hotkey set: {key_combo} → {action_name}")
-            except Exception as exc:
-                self.set_status_message(f"hotkey set failed: {exc}")
-
-        self.push_screen(HotkeySetScreen(), _on_dismiss)
-        return CommandResult(True, "hotkey set opened")
+    # ----- leader key & file tree helpers ----------------------------
 
     def open_which_key(self) -> None:
-        from editor_which_key import WhichKeyScreen
+        from modals.which_key import WhichKeyScreen
         self.push_screen(WhichKeyScreen(self), self._on_which_key_dismiss)
 
     def _on_which_key_dismiss(self, key: str | None) -> None:
@@ -687,78 +345,8 @@ class SimpleTextEditorApp(App):
         self.leader_dispatch(key)
 
     def leader_dispatch(self, key: str) -> None:
-        if key == "n":
-            self._cmd_doc_new(self)
-        elif key == "o":
-            self._cmd_doc_open(self)
-        elif key == "s":
-            self._cmd_save(self)
-        elif key == "p":
-            self.open_command_palette()
-        elif key == "b":
-            self._cmd_pane_files_toggle(self)
-        elif key == "h":
-            self._cmd_pane_focus_files(self)
-        elif key == "l":
-            self._cmd_pane_focus_editor(self)
-        elif key == "j":
-            self._cmd_pane_focus_down(self)
-        elif key == "k":
-            self._cmd_pane_focus_up(self)
-        elif key == "?":
-            result = self._cmd_hotkeys(self)
-            self.set_status_message(result.message or "")
-        elif key == "d":
-            self._cmd_doc_delete(self)
-
-    def _cmd_doc_new(self, app: Any) -> CommandResult:
-        from editor_new_doc import NewDocScreen
-
-        def _on_dismiss(name: str | None) -> None:
-            if not name:
-                self.set_status_message("new document cancelled")
-                return
-            if not name.endswith(".json"):
-                name += ".json"
-            new_path = self.vault_path / name
-            if new_path.exists():
-                self.set_status_message(f"file already exists: {name}")
-                return
-            try:
-                save(new_path, "", [])
-            except StorageError as exc:
-                self.set_status_message(f"create failed: {exc}")
-                return
-            self.open_document(new_path)
-            self._refresh_file_tree()
-            self._focused_panel = "editor"
-            self._update_panel_borders()
-
-        self.push_screen(NewDocScreen(), _on_dismiss)
-        return CommandResult(True, "new document opened")
-
-    def _cmd_doc_open(self, app: Any) -> CommandResult:
-        from editor_doc_picker import DocPickerScreen
-
-        docs = list_documents(self.vault_path)
-
-        def _on_dismiss(path_str: str | None) -> None:
-            if not path_str:
-                self.set_status_message("open cancelled")
-                return
-            self.open_document(Path(path_str))
-            self._refresh_file_tree()
-            self._focused_panel = "editor"
-            self._update_panel_borders()
-
-        self.push_screen(DocPickerScreen(docs), _on_dismiss)
-        return CommandResult(True, "doc picker opened")
-
-    def action_doc_new(self) -> None:
-        self._cmd_doc_new(self)
-
-    def action_doc_open(self) -> None:
-        self._cmd_doc_open(self)
+        from features.leader import dispatch
+        dispatch(self, key)
 
     def _refresh_file_tree(self) -> None:
         try:
@@ -766,36 +354,6 @@ class SimpleTextEditorApp(App):
             tree.reload()
         except Exception:
             pass
-
-    def action_pane_focus_left(self) -> None:
-        self._cmd_pane_focus_files(self)
-
-    def action_pane_focus_right(self) -> None:
-        self.action_pane_focus_up()
-
-    def action_pane_focus_up(self) -> None:
-        self._editor().focus()
-
-    def action_pane_focus_down(self) -> None:
-        self._editor().focus()
-
-    def _cmd_rename(self, app: Any) -> CommandResult:
-        from editor_rename import RenamePromptScreen
-
-        def _on_dismiss(new_name: str | None) -> None:
-            if not new_name:
-                self.set_status_message("rename cancelled")
-                return
-            try:
-                new_path = rename(self.document_path, new_name)
-            except StorageError as exc:
-                self.set_status_message(f"rename failed: {exc}")
-                return
-            self.document_path = new_path
-            self.set_status_message(f"renamed to {new_path.name}")
-
-        self.push_screen(RenamePromptScreen(self.document_path.name), _on_dismiss)
-        return CommandResult(True, "rename prompt opened")
 
     # ----- document persistence --------------------------------------
 
@@ -867,10 +425,6 @@ class SimpleTextEditorApp(App):
 
     def on_file_tree_panel_document_selected(self, event: FileTreePanel.DocumentSelected) -> None:
         self.open_document(event.path)
-
-
-# Alias for the old command name — maintains backwards compatibility for tests
-SimpleTextEditorApp.action_force_save = SimpleTextEditorApp.save_document
 
 
 if __name__ == "__main__":

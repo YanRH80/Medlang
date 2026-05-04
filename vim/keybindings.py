@@ -38,23 +38,15 @@ Freeze criteria
 from __future__ import annotations
 
 import re
-from enum import StrEnum
 from typing import Any
 
 from textual.widgets.text_area import Selection
 
+from vim.modes import VimMode
+
 
 _WORD_RE = re.compile(r"\w+")
 _BIG_WORD_RE = re.compile(r"\S+")
-
-
-class VimMode(StrEnum):
-    """Editor modes exposed to the user."""
-
-    INSERT = "insert"
-    NORMAL = "normal"
-    VISUAL = "visual"
-    VISUAL_LINE = "visual_line"
 
 
 # ---------------------------------------------------------------------------
